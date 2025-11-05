@@ -11,7 +11,12 @@ struct Dados{
 };
 
 int lerArquivo(struct Dados **registro){
-    FILE *arquivo = fopen("alertas_1000_1.csv", "r");
+    char nomeDoArquivo[100];
+
+    printf("Digite o nome do arquivo que vai ser enviado:\n");
+    scanf("%99s", nomeDoArquivo);
+
+    FILE *arquivo = fopen(nomeDoArquivo, "r");
     if (arquivo == NULL){
         printf("Erro ao abrir o arquivo");
         return 1;
@@ -32,11 +37,11 @@ int lerArquivo(struct Dados **registro){
             (*registro)[total] = temp;
             total++;
             
-            char nomeArquivo[64];
-            sprintf(nomeArquivo, "%d.csv", temp.br);
-            FILE *saida = fopen(nomeArquivo, "a");
+            char nomeArquivoBrs[64];
+            sprintf(nomeArquivoBrs, "%d.csv", temp.br);
+            FILE *saida = fopen(nomeArquivoBrs, "a");
             if (saida == NULL){
-                printf("erro ao criar o arquivo %s\n", nomeArquivo);
+                printf("erro ao criar o arquivo %s\n", nomeArquivoBrs);
                 continue;
             }
             fprintf(saida, "%d;%d;%d;%.2f;%c\n", temp.idUsuario, temp.timestamp, temp.br, temp.km, temp.tipoAlerta);
@@ -50,4 +55,6 @@ int lerArquivo(struct Dados **registro){
 int main(){
     struct Dados *registro = NULL;
     int total = lerArquivo(&registro);
+    free(registro);
+    return 0;
 }
