@@ -45,7 +45,7 @@ void criarUpvotes(char *nomeArquivoBrs, struct Dados dado){
             }
         }
         fclose(original);
-            /* code */
+        
         }
         if (!encontrado){
             fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n", dado.idUsuario, dado.timestamp, dado.br, dado.km, dado.tipoAlerta, 1);
