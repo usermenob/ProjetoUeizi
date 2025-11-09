@@ -139,27 +139,88 @@ void liberarLista(Alerta **inicio){
     }
 }
 
+int gerarRelatorioTrecho(char *caminho, Alerta *inicio, int br_escolhida, double km_inicial, double km_final){
+    FILE *f = fopen(caminho, "w");
+    if (!f){
+        perror("fopen");
+        return 0;
+    }
+
+    fprintf(f, "br;km;tipo;upvotes\n");
+
+    int linhas = 0;
+    for (Alerta *p = inicio; p; p = p->proximo){
+        if (p->br != br_escolhida) continue;
+        if (p->km < km_inicial) continue;
+        if (p-> km > km_final) continue;
+
+        fprintf(f, "%d;%.1f;%c;%d\n", p->br, p->km, p->tipo, p->upvotes);
+        linhas++;
+    }
+
+    fclose(f);
+    return linhas;
+}
+
 int main(void){
+
+    printf("Bem-Vindo ao Ueizi! O que voce deseja fazer agora?\n");
+    printf("1 - Enviar dados para o Ueizi\n");
+    printf("2 - Gerar Relatorio\n");
     Alerta *inicio = NULL;
-    int rec = carregarConsolidado("consolidado.csv", &inicio);
-    if (rec > 0){
-        printf("Carregados %d registros do consolidado.csv\n", rec);
+    int op;
+    scanf("%d", &op);
+
+    int consolidado = carregarConsolidado("consolidado.csv", &inicio);
+
+    switch(op){
+        case 1: {
+            int N = 0;
+            printf("Quantos CSVs brutos deseja importar agora?\n");
+            if (scanf(" %d", &N) != 1 || N < 0){
+                printf("Entrada invalida.");
+                return 0;
+            }
+
+            for (int i = 0; i < N; i++){
+                int lidas = carregarArquivo(&inicio);
+                printf("CSV(s) importado(s) com sucesso: %d linhas validas\n", lidas);
+            }
+
+            int linhas = salvarConsolidado("consolidado.csv", inicio);
+            printf("Gravados %d registros em consolidado.csv\n", linhas);
+
+            liberarLista(&inicio);
+            break;
+        }
+
+        case 2: {
+
+            if (inicio == NULL){
+                printf("Sem dados carregados.");
+                break;
+            }
+
+            int br;
+            double inicial, final;
+
+            printf("BR (ex: 232): ");
+            if (scanf(" %d", &br) != 1){
+                printf("Entrada invalida para BR.\n");
+                break;
+            }
+            printf("Trecho (ex: 100 170): ");
+            if (scanf(" %lf %lf", &inicial, &final) != 2){
+                printf("Entrada invalida para trecho.\n");
+                break;
+            }
+            int linhas = gerarRelatorioTrecho("alertas_por_br.csv", inicio, br, inicial, final);
+            printf("Relatorio gerado com %d linhas em alertas_por_br.csv\n", linhas);
+            liberarLista(&inicio);
+            break;
+        }
     }
 
-    int N = 0;
-    printf("Quantos CSVs brutos deseja importar agora? ");
-    if (scanf(" %d", &N) != 1) N = 0;
-
-    for (int i = 0; i < N; i++){
-        int lidas = carregarArquivo(&inicio);
-        printf(" -> CSV %d: %d linhas validas\n", i+1, lidas);
-    }
-
-    int gravar = salvarConsolidado("consolidado.csv", inicio);
-    printf("Gravados %d registros em consolidado.csv\n", gravar);
-
-    liberarLista(&inicio);
-    return 0;
 }
 
 
