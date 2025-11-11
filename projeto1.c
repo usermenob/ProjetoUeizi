@@ -41,32 +41,27 @@ void criarUpvotes(char *nomeArquivoBrs, struct Dados dado) {
     char tipoAlerta;
 
     while (fgets(linha, sizeof(linha), original) != NULL) {
-        if (sscanf(linha, "%d;%d;%d;%f;%c;%d",
-                   &idUsuario, &timestamp, &br, &km, &tipoAlerta, &upvotes) == 6) {
+        if (sscanf(linha, "%d;%d;%d;%f;%c;%d", &idUsuario, &timestamp, &br, &km, &tipoAlerta, &upvotes) == 6) {
             if (km == dado.km && tipoAlerta == dado.tipoAlerta) {
                 upvotes++;
                 encontrado = 1;
             }
-            fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n",
-                    idUsuario, timestamp, br, km, tipoAlerta, upvotes);
-        } else if (sscanf(linha, "%d;%d;%d;%f;%c",
-                          &idUsuario, &timestamp, &br, &km, &tipoAlerta) == 5) {
+            fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n", idUsuario, timestamp, br, km, tipoAlerta, upvotes);
+        } else if (sscanf(linha, "%d;%d;%d;%f;%c", &idUsuario, &timestamp, &br, &km, &tipoAlerta) == 5) {
             if (km == dado.km && tipoAlerta == dado.tipoAlerta) {
                 upvotes = 2;
                 encontrado = 1;
             } else {
                 upvotes = 1;
             }
-            fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n",
-                    idUsuario, timestamp, br, km, tipoAlerta, upvotes);
+            fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n", idUsuario, timestamp, br, km, tipoAlerta, upvotes);
         }
     }
 
     fclose(original);
 
     if (!encontrado) {
-        fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n",
-                dado.idUsuario, dado.timestamp, dado.br, dado.km, dado.tipoAlerta, 1);
+        fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n", dado.idUsuario, dado.timestamp, dado.br, dado.km, dado.tipoAlerta, 1);
     }
 
     fclose(temporario);
@@ -91,8 +86,7 @@ int lerArquivo() {
     char linha[256];
 
     while (fgets(linha, sizeof(linha), arquivo) != NULL) {
-        if (sscanf(linha, "%d;%d;%d;%f;%c",
-                   &temp.idUsuario, &temp.timestamp, &temp.br, &temp.km, &temp.tipoAlerta) == 5) {
+        if (sscanf(linha, "%d;%d;%d;%f;%c", &temp.idUsuario, &temp.timestamp, &temp.br, &temp.km, &temp.tipoAlerta) == 5) {
 
             if (temp.km - (int)temp.km < 0.5)
                 temp.km = (int)temp.km;
@@ -119,11 +113,20 @@ void somaAlertas(const char *nomeArquivoBrs, FILE *saida) {
     }
 
     int alertaA = 0, alertaB = 0, alertaC = 0, alertaD = 0, alertaE = 0, alertaF = 0;
-    char linha[1024];
+
+    char linha[256];
+    int idUsuario, timestamp, br, upvotes;
+    float km;
+    char tipoAlerta;
+
+    fgets(linha, sizeof(linha), arquivo);
+    if (strstr(linha, "idUsuario") == NULL && strstr(linha, "br;") == NULL) {
+        fseek(arquivo, 0, SEEK_SET);
+    }
 
     while (fgets(linha, sizeof(linha), arquivo)) {
-        for (int i = 0; linha[i] != '\0'; i++) {
-            switch (linha[i]) {
+        if (sscanf(linha, "%d;%d;%d;%f;%c;%d", &idUsuario, &timestamp, &br, &km, &tipoAlerta, &upvotes) == 6) {
+            switch (tipoAlerta) {
                 case 'A': alertaA++; break;
                 case 'B': alertaB++; break;
                 case 'C': alertaC++; break;
@@ -136,18 +139,19 @@ void somaAlertas(const char *nomeArquivoBrs, FILE *saida) {
 
     fclose(arquivo);
 
-    char br[50];
-    strcpy(br, nomeArquivoBrs);
-    char *ponto = strchr(br, '.');
+    char brStr[50];
+    strcpy(brStr, nomeArquivoBrs);
+    char *ponto = strchr(brStr, '.');
     if (ponto) *ponto = '\0';
 
-    if (alertaA > 0) fprintf(saida, "%s;A;%d\n", br, alertaA);
-    if (alertaB > 0) fprintf(saida, "%s;B;%d\n", br, alertaB);
-    if (alertaC > 0) fprintf(saida, "%s;C;%d\n", br, alertaC);
-    if (alertaD > 0) fprintf(saida, "%s;D;%d\n", br, alertaD);
-    if (alertaE > 0) fprintf(saida, "%s;E;%d\n", br, alertaE);
-    if (alertaF > 0) fprintf(saida, "%s;F;%d\n", br, alertaF);
+    if (alertaA > 0) fprintf(saida, "%s;A;%d\n", brStr, alertaA);
+    if (alertaB > 0) fprintf(saida, "%s;B;%d\n", brStr, alertaB);
+    if (alertaC > 0) fprintf(saida, "%s;C;%d\n", brStr, alertaC);
+    if (alertaD > 0) fprintf(saida, "%s;D;%d\n", brStr, alertaD);
+    if (alertaE > 0) fprintf(saida, "%s;E;%d\n", brStr, alertaE);
+    if (alertaF > 0) fprintf(saida, "%s;F;%d\n", brStr, alertaF);
 }
+
 
 void gerarRelatorio() {
     DIR *dir;
@@ -180,15 +184,62 @@ void gerarRelatorio() {
     printf("\n'alertas_brs_todas.csv' gerado\n");
 }
 
+void gerarRelatorioTrecho() {
+    int br;
+    float kmInicio, kmFim;
+
+    printf("digite o numero da BR: ");
+    scanf("%d", &br);
+    printf("digite o km inicial: ");
+    scanf("%f", &kmInicio);
+    printf("digite o km final: ");
+    scanf("%f", &kmFim);
+
+    char nomeArquivoBrs[64];
+    sprintf(nomeArquivoBrs, "%d.csv", br);
+
+    FILE *arquivoBr = fopen(nomeArquivoBrs, "r");
+    if (arquivoBr == NULL) {
+        printf("erro arquivo da BR não encontrado.\n", br);
+        return;
+    }
+
+    FILE *saida = fopen("alertas_por_br.csv", "w");
+    if (saida == NULL) {
+        printf("erro ao criar o arquivo.\n");
+        fclose(arquivoBr);
+        return;
+    }
+
+    fprintf(saida, "br;km;tipoAlerta;upvotes\n");
+
+    char linha[256];
+    int idUsuario, timestamp, brLido, upvotes;
+    float km;
+    char tipoAlerta;
+
+    while (fgets(linha, sizeof(linha), arquivoBr) != NULL) {
+        if (sscanf(linha, "%d;%d;%d;%f;%c;%d", &idUsuario, &timestamp, &brLido, &km, &tipoAlerta, &upvotes) == 6) {
+            if (km >= kmInicio && km <= kmFim) {
+                fprintf(saida, "%d;%.1f;%c;%d\n", brLido, km, tipoAlerta, upvotes);
+            }
+        }
+    }
+
+    fclose(arquivoBr);
+    fclose(saida);
+
+    printf("\n 'alertas_por_br.csv' gerado\n");
+}
+
 int main() {
     int opcao;
 
     do {
-        printf("\n========= MENU =========\n");
         printf("1 - inserir arquivo de alertas\n");
         printf("2 - gerar relatorio de alertas das BRs\n");
+        printf("3 - Gerar relatorio de trecho de BR\n");
         printf("0 - sair\n");
-        printf("========================\n");
         printf("escolha uma opcao: ");
         scanf("%d", &opcao);
 
@@ -198,6 +249,9 @@ int main() {
                 break;
             case 2:
                 gerarRelatorio();
+                break;
+            case 3:
+                gerarRelatorioTrecho();
                 break;
             case 0:
                 break;
