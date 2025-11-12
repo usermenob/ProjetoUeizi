@@ -12,62 +12,124 @@ struct Dados {
     char tipoAlerta;
 };
 
-void criarUpvotes(char *nomeArquivoBrs, struct Dados dado) {
-    FILE *original = fopen(nomeArquivoBrs, "r");
+struct Alerta {
+        int idUsuario;
+        int timestamp;
+        int br;
+        float km;
+        char tipoAlerta;
+        int upvotes;
+        struct Alerta *prox;
+    };
 
-    if (original == NULL) {
+void criarUpvotes(char *nomeArquivoBrs, struct Dados dado) {
+    struct Alerta *inicio = NULL;
+    struct Alerta *atual = NULL;
+    struct Alerta *ultimo = NULL;
+
+    FILE *arquivo = fopen(nomeArquivoBrs, "r");
+
+    if (arquivo == NULL) {
         FILE *novo = fopen(nomeArquivoBrs, "w");
         if (novo == NULL) {
             printf("erro ao criar o arquivo %s\n", nomeArquivoBrs);
             return;
         }
-        fprintf(novo, "%d;%d;%d;%.2f;%c;%d\n",
-                dado.idUsuario, dado.timestamp, dado.br, dado.km, dado.tipoAlerta, 1);
+        fprintf(novo, "%d;%d;%d;%.2f;%c;%d\n", dado.idUsuario, dado.timestamp, dado.br, dado.km, dado.tipoAlerta, 1);
         fclose(novo);
         return;
     }
 
-    FILE *temporario = fopen("temporario.csv", "w");
-    if (temporario == NULL) {
-        printf("erro ao criar arquivo temporario.\n");
-        fclose(original);
-        return;
-    }
-
-    int encontrado = 0;
     char linha[256];
     int idUsuario, timestamp, br, upvotes;
     float km;
     char tipoAlerta;
 
-    while (fgets(linha, sizeof(linha), original) != NULL) {
-        if (sscanf(linha, "%d;%d;%d;%f;%c;%d", &idUsuario, &timestamp, &br, &km, &tipoAlerta, &upvotes) == 6) {
-            if (km == dado.km && tipoAlerta == dado.tipoAlerta) {
-                upvotes++;
-                encontrado = 1;
-            }
-            fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n", idUsuario, timestamp, br, km, tipoAlerta, upvotes);
-        } else if (sscanf(linha, "%d;%d;%d;%f;%c", &idUsuario, &timestamp, &br, &km, &tipoAlerta) == 5) {
-            if (km == dado.km && tipoAlerta == dado.tipoAlerta) {
-                upvotes = 2;
-                encontrado = 1;
-            } else {
-                upvotes = 1;
-            }
-            fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n", idUsuario, timestamp, br, km, tipoAlerta, upvotes);
+    while (fgets(linha, sizeof(linha), arquivo) != NULL){
+        struct Alerta *novo = malloc(sizeof(struct Alerta));
+        if (novo == NULL){
+            printf("erro de memoria\n");
+            fclose(arquivo);
+            return;
         }
-    }
 
-    fclose(original);
+        if (sscanf(linha, "%d;%d;%d;%f;%c;%d", &idUsuario, &timestamp, &br, &km, &tipoAlerta, &upvotes) == 6){
+            novo -> idUsuario = idUsuario;
+            novo -> timestamp = timestamp;
+            novo -> br = br;
+            novo -> km = km;
+            novo -> tipoAlerta = tipoAlerta;
+            novo -> upvotes = upvotes;
+        } else if (sscanf(linha, "%d;%d;%d;%f;%c", &idUsuario, &timestamp, &br, &km, &tipoAlerta)== 5){
+            novo -> idUsuario = idUsuario;
+            novo -> timestamp = timestamp;
+            novo -> br = br;
+            novo -> km = km;
+            novo -> tipoAlerta = tipoAlerta;
+            novo -> upvotes = 1;
+        } else {
+            free(novo);
+            continue;
+        }
+        novo->prox = NULL;
+        if (inicio == NULL)
+            inicio = novo;
+        else
+            ultimo->prox = novo;
+        ultimo = novo;
+    }
+    fclose(arquivo);
+
+    int encontrado = 0;
+    atual = inicio;
+    while (atual != NULL) {
+        if (atual->km == dado.km && atual->tipoAlerta == dado.tipoAlerta) {
+            atual->upvotes++;
+            encontrado = 1;
+            break;
+        }
+        atual = atual->prox;
+    }
 
     if (!encontrado) {
-        fprintf(temporario, "%d;%d;%d;%.2f;%c;%d\n", dado.idUsuario, dado.timestamp, dado.br, dado.km, dado.tipoAlerta, 1);
+        struct Alerta *novo = malloc(sizeof(struct Alerta));
+        if (novo == NULL) {
+            printf("erro de memória\n");
+            return;
+        }
+        novo->idUsuario = dado.idUsuario;
+        novo->timestamp = dado.timestamp;
+        novo->br = dado.br;
+        novo->km = dado.km;
+        novo->tipoAlerta = dado.tipoAlerta;
+        novo->upvotes = 1;
+        novo->prox = NULL;
+
+        if (inicio == NULL)
+            inicio = novo;
+        else
+            ultimo->prox = novo;
     }
 
-    fclose(temporario);
+    FILE *saida = fopen(nomeArquivoBrs, "w");
+    if (saida == NULL) {
+        printf("erro ao reabrir o arquivo %s\n", nomeArquivoBrs);
+        return;
+    }
 
-    remove(nomeArquivoBrs);
-    rename("temporario.csv", nomeArquivoBrs);
+    atual = inicio;
+    while (atual != NULL) {
+        fprintf(saida, "%d;%d;%d;%.2f;%c;%d\n", atual->idUsuario, atual->timestamp, atual->br, atual->km, atual->tipoAlerta, atual->upvotes);
+        atual = atual->prox;
+    }
+
+    fclose(saida);
+
+    while (inicio != NULL) {
+        struct Alerta *tmp = inicio;
+        inicio = inicio->prox;
+        free(tmp);
+    }
 }
 
 int lerArquivo() {
@@ -200,7 +262,7 @@ void gerarRelatorioTrecho() {
 
     FILE *arquivoBr = fopen(nomeArquivoBrs, "r");
     if (arquivoBr == NULL) {
-        printf("erro arquivo da BR não encontrado.\n", br);
+        printf("erro arquivo da BR não encontrado.\n");
         return;
     }
 
